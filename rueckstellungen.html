@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rückstellungs-Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f1117; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  .header { background: #1a1d27; border-bottom: 1px solid #2d3250; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; }
+  .header-title { font-weight: 700; font-size: 16px; }
+  .header-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .header-stand-label { font-size: 10px; color: #64748b; text-align: right; }
+  .header-stand-value { font-size: 22px; font-weight: 700; color: #22c55e; font-variant-numeric: tabular-nums; }
+
+  .tabs { display: flex; background: #1a1d27; border-bottom: 1px solid #2d3250; }
+  .tab { flex: 1; padding: 11px 6px; background: none; border: none; border-bottom: 2px solid transparent; color: #64748b; font-size: 13px; cursor: pointer; font-family: inherit; transition: color 0.15s; }
+  .tab.active { color: #3b82f6; border-bottom-color: #3b82f6; font-weight: 600; }
+  .tab.icon { flex: none; padding: 11px 14px; }
+
+  .content { padding: 16px; max-width: 660px; margin: 0 auto; }
+  .section-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+
+  .card { background: #20243a; border: 1px solid #2d3250; border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; }
+  .card-row { display: flex; justify-content: space-between; align-items: center; }
+  .card-name { font-weight: 600; font-size: 14px; }
+  .card-count { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .card-amount { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .card-amount-label { font-size: 10px; color: #64748b; text-align: right; }
+
+  .total-card { background: #1e3a5f; border: 1px solid #3b82f6; border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; margin-top: 12px; margin-bottom: 14px; }
+  .total-label { font-weight: 600; color: #3b82f6; }
+  .total-value { font-size: 20px; font-weight: 700; color: #22c55e; font-variant-numeric: tabular-nums; }
+
+  .toggle-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .toggle-btn { padding: 11px; border: 2px solid #2d3250; border-radius: 8px; background: #20243a; color: #64748b; font-weight: 600; font-size: 13px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .toggle-btn.active-ein { border-color: #22c55e; background: #052e16; color: #22c55e; }
+  .toggle-btn.active-aus { border-color: #ef4444; background: #2d0a0a; color: #ef4444; }
+
+  label { display: block; font-size: 11px; color: #64748b; margin-bottom: 4px; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.4px; }
+  input, select { width: 100%; padding: 10px 12px; background: #1a1d27; border: 1px solid #2d3250; border-radius: 7px; color: #e2e8f0; font-size: 14px; font-family: inherit; margin-bottom: 12px; }
+  input:focus, select:focus { outline: 2px solid #3b82f6; border-color: #3b82f6; }
+
+  .preview { background: #1a1d27; border: 1px solid #2d3250; border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 13px; }
+  .preview-label { font-size: 11px; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
+  .preview-row { display: flex; justify-content: space-between; margin-bottom: 3px; }
+  .preview-row.total { font-weight: 700; margin-top: 6px; padding-top: 6px; border-top: 1px solid #2d3250; }
+
+  .btn-primary { width: 100%; padding: 13px; background: #3b82f6; border: none; border-radius: 8px; color: #fff; font-weight: 700; font-size: 15px; cursor: pointer; font-family: inherit; }
+  .btn-secondary { width: 100%; padding: 10px; background: #1e3a5f; border: 1px solid #3b82f6; border-radius: 6px; color: #3b82f6; font-weight: 600; font-size: 13px; cursor: pointer; font-family: inherit; }
+
+  .msg-success { color: #22c55e; font-size: 13px; margin-bottom: 10px; padding: 8px 12px; background: #052e16; border-radius: 6px; }
+  .msg-error { color: #ef4444; font-size: 13px; margin-bottom: 10px; padding: 8px 12px; background: #2d0a0a; border-radius: 6px; }
+
+  .buchung-card { background: #1a1d27; border: 1px solid #2d3250; border-radius: 8px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+  .buchung-info { flex: 1; min-width: 0; }
+  .buchung-header { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; flex-wrap: wrap; }
+  .buchung-betrag { font-weight: 700; font-size: 14px; }
+  .buchung-datum { font-size: 11px; color: #64748b; }
+  .buchung-topf { font-size: 12px; color: #94a3b8; margin-bottom: 2px; }
+  .buchung-notiz { font-size: 11px; color: #64748b; font-style: italic; }
+  .buchung-stand { font-size: 11px; color: #475569; margin-top: 4px; }
+  .buchung-stand span { color: #22c55e; font-variant-numeric: tabular-nums; }
+  .del-btn { background: none; border: none; color: #475569; cursor: pointer; font-size: 18px; line-height: 1; flex-shrink: 0; padding: 0 2px; }
+  .del-btn:hover { color: #ef4444; }
+
+  .empty { text-align: center; color: #64748b; padding: 48px 0; font-size: 14px; }
+
+  .settings-card { background: #20243a; border: 1px solid #2d3250; border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+  .settings-title { font-weight: 600; margin-bottom: 4px; }
+  .settings-sub { font-size: 12px; color: #64748b; margin-bottom: 12px; line-height: 1.5; }
+  .topf-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #2d3250; font-size: 13px; }
+  .topf-row:last-child { border-bottom: none; }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .green { color: #22c55e; }
+  .red { color: #ef4444; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">💰 Rückstellungs-Tracker</div>
+    <div class="header-sub">Scalable Capital · Tagesgeld 2,5 % p.a.</div>
+  </div>
+  <div>
+    <div class="header-stand-label">Tagesgeld-Stand</div>
+    <div class="header-stand-value" id="headerStand">0,00 €</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('uebersicht', this)">Übersicht</button>
+  <button class="tab" onclick="showTab('buchen', this)">Buchung</button>
+  <button class="tab" onclick="showTab('verlauf', this)">Verlauf</button>
+  <button class="tab icon" onclick="showTab('einstellungen', this)">⚙</button>
+</div>
+
+<!-- ÜBERSICHT -->
+<div class="content page active" id="page-uebersicht">
+  <div class="section-label">Rückstellungstöpfe</div>
+  <div id="toepfe-list"></div>
+  <div class="total-card">
+    <div class="total-label">Gesamt Tagesgeld</div>
+    <div class="total-value" id="gesamtStand">0,00 €</div>
+  </div>
+  <div id="letzte-buchung-container" style="display:none">
+    <div class="section-label">Letzte Buchung</div>
+    <div id="letzte-buchung"></div>
+  </div>
+</div>
+
+<!-- BUCHEN -->
+<div class="content page" id="page-buchen">
+  <div class="section-label">Neue Buchung</div>
+  <div class="toggle-row">
+    <button class="toggle-btn active-ein" id="btn-ein" onclick="setRichtung('einzahlen')">↑ Einzahlen</button>
+    <button class="toggle-btn" id="btn-aus" onclick="setRichtung('entnehmen')">↓ Entnehmen</button>
+  </div>
+  <label>Rückstellungstopf</label>
+  <select id="form-topf">
+    <option>Rückstellung BMW</option>
+    <option>Rückstellung Mitsubishi</option>
+    <option>Urlaub</option>
+    <option>Rechtsschutz</option>
+  </select>
+  <label>Betrag (€)</label>
+  <input type="number" id="form-betrag" placeholder="0,00" oninput="updatePreview()">
+  <label>Datum</label>
+  <input type="date" id="form-datum">
+  <label>Notiz (optional)</label>
+  <input type="text" id="form-notiz" placeholder="z.B. Bremsscheiben vorne">
+
+  <div class="preview" id="preview" style="display:none">
+    <div class="preview-label">Vorschau</div>
+    <div class="preview-row"><span>Stand vorher</span><span id="prev-vorher">0,00 €</span></div>
+    <div class="preview-row" id="prev-buchung-row"><span id="prev-buchung-label">+ Buchung</span><span id="prev-buchung">0,00 €</span></div>
+    <div class="preview-row total"><span>Stand danach</span><span id="prev-danach" class="green">0,00 €</span></div>
+  </div>
+
+  <div id="form-error" style="display:none" class="msg-error"></div>
+  <div id="form-success" style="display:none" class="msg-success"></div>
+  <button class="btn-primary" onclick="speichereBuchung()">Buchung speichern</button>
+</div>
+
+<!-- VERLAUF -->
+<div class="content page" id="page-verlauf">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div class="section-label" style="margin-bottom:0">Buchungsverlauf</div>
+    <span style="font-size:12px;color:#64748b" id="verlauf-count">0 Einträge</span>
+  </div>
+  <div id="verlauf-list"></div>
+</div>
+
+<!-- EINSTELLUNGEN -->
+<div class="content page" id="page-einstellungen">
+  <div class="section-label">Einstellungen</div>
+  <div class="settings-card">
+    <div class="settings-title">Tagesgeld-Stand manuell setzen</div>
+    <div class="settings-sub">Aktuell: <strong class="green" id="settings-stand">0,00 €</strong><br>Nutze dies nach Zinsgutschrift oder zur Korrektur.</div>
+    <label>Neuer Stand (€)</label>
+    <input type="number" id="settings-betrag" placeholder="0,00" style="margin-bottom:8px">
+    <button class="btn-secondary" onclick="manuellerStand()">Stand aktualisieren</button>
+    <div id="settings-msg" style="display:none;margin-top:8px;font-size:12px;color:#22c55e"></div>
+  </div>
+  <div class="settings-card">
+    <div class="settings-title" style="margin-bottom:8px">Töpfe &amp; Stände</div>
+    <div id="settings-toepfe"></div>
+  </div>
+</div>
+
+<script>
+const TOEPFE = ["Rückstellung BMW", "Rückstellung Mitsubishi", "Urlaub", "Rechtsschutz"];
+const KEY = "rueckstellungen-v1";
+let richtung = "einzahlen";
+
+function laden() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || { stand: 0, buchungen: [] }; }
+  catch { return { stand: 0, buchungen: [] }; }
+}
+function speichern(data) { localStorage.setItem(KEY, JSON.stringify(data)); }
+
+function eur(val) {
+  return Number(val).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+}
+function datum(iso) {
+  return new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function getSumByTopf(buchungen) {
+  const m = {}; TOEPFE.forEach(t => m[t] = 0);
+  buchungen.forEach(b => { m[b.topf] = (m[b.topf]||0) + (b.richtung==="einzahlen" ? b.betrag : -b.betrag); });
+  return m;
+}
+
+function renderAll() {
+  const data = laden();
+  const summen = getSumByTopf(data.buchungen);
+
+  document.getElementById("headerStand").textContent = eur(data.stand);
+  document.getElementById("gesamtStand").textContent = eur(data.stand);
+  document.getElementById("settings-stand").textContent = eur(data.stand);
+
+  // Töpfe
+  const tList = document.getElementById("toepfe-list");
+  tList.innerHTML = TOEPFE.map(t => {
+    const s = summen[t]||0;
+    const n = data.buchungen.filter(b=>b.topf===t).length;
+    return `<div class="card"><div class="card-row">
+      <div><div class="card-name">${t}</div><div class="card-count">${n} Buchung${n!==1?"en":""}</div></div>
+      <div><div class="card-amount ${s>=0?"green":"red"}">${eur(s)}</div><div class="card-amount-label">übertragen</div></div>
+    </div></div>`;
+  }).join("");
+
+  // Settings Töpfe
+  document.getElementById("settings-toepfe").innerHTML = TOEPFE.map(t =>
+    `<div class="topf-row"><span>${t}</span><span class="green">${eur(summen[t]||0)}</span></div>`
+  ).join("");
+
+  // Letzte Buchung
+  if (data.buchungen.length > 0) {
+    document.getElementById("letzte-buchung-container").style.display = "block";
+    document.getElementById("letzte-buchung").innerHTML = buchungHTML(data.buchungen[0], false);
+  } else {
+    document.getElementById("letzte-buchung-container").style.display = "none";
+  }
+
+  // Verlauf
+  document.getElementById("verlauf-count").textContent = data.buchungen.length + " Einträge";
+  if (data.buchungen.length === 0) {
+    document.getElementById("verlauf-list").innerHTML = `<div class="empty">Noch keine Buchungen.<br><span style="font-size:12px">Starte mit deiner ersten Übertragung.</span></div>`;
+  } else {
+    document.getElementById("verlauf-list").innerHTML = data.buchungen.map(b => buchungHTML(b, true)).join("");
+  }
+}
+
+function buchungHTML(b, showDelete) {
+  const isEin = b.richtung === "einzahlen";
+  const delBtn = showDelete ? `<button class="del-btn" onclick="loescheBuchung(${b.id})" title="Löschen">×</button>` : "";
+  return `<div class="buchung-card">
+    <div class="buchung-info">
+      <div class="buchung-header">
+        <span class="buchung-betrag ${isEin?"green":"red"}">${isEin?"↑ +":"↓ −"}${eur(b.betrag)}</span>
+        <span class="buchung-datum">· ${datum(b.datum)}</span>
+      </div>
+      <div class="buchung-topf">${b.topf}</div>
+      ${b.notiz ? `<div class="buchung-notiz">${b.notiz}</div>` : ""}
+      <div class="buchung-stand">Stand danach: <span>${eur(b.standNach)}</span></div>
+    </div>
+    ${delBtn}
+  </div>`;
+}
+
+function showTab(name, el) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("page-" + name).classList.add("active");
+  el.classList.add("active");
+  renderAll();
+}
+
+function setRichtung(r) {
+  richtung = r;
+  document.getElementById("btn-ein").className = "toggle-btn" + (r==="einzahlen"?" active-ein":"");
+  document.getElementById("btn-aus").className = "toggle-btn" + (r==="entnehmen"?" active-aus":"");
+  updatePreview();
+}
+
+function updatePreview() {
+  const betrag = parseFloat(document.getElementById("form-betrag").value)||0;
+  const data = laden();
+  if (betrag <= 0) { document.getElementById("preview").style.display="none"; return; }
+  document.getElementById("preview").style.display = "block";
+  const vz = richtung==="einzahlen" ? 1 : -1;
+  const danach = data.stand + vz * betrag;
+  document.getElementById("prev-vorher").textContent = eur(data.stand);
+  document.getElementById("prev-buchung-label").textContent = (richtung==="einzahlen"?"+":"−") + " Buchung";
+  document.getElementById("prev-buchung-label").className = richtung==="einzahlen"?"green":"red";
+  document.getElementById("prev-buchung").textContent = eur(betrag);
+  document.getElementById("prev-danach").textContent = eur(danach);
+}
+
+function speichereBuchung() {
+  const betrag = parseFloat(document.getElementById("form-betrag").value);
+  const topf = document.getElementById("form-topf").value;
+  const datumVal = document.getElementById("form-datum").value;
+  const notiz = document.getElementById("form-notiz").value.trim();
+  const errEl = document.getElementById("form-error");
+  const sucEl = document.getElementById("form-success");
+
+  errEl.style.display = "none";
+  sucEl.style.display = "none";
+
+  if (!betrag || betrag <= 0) { errEl.textContent = "Bitte einen gültigen Betrag eingeben."; errEl.style.display="block"; return; }
+  if (!datumVal) { errEl.textContent = "Bitte ein Datum wählen."; errEl.style.display="block"; return; }
+
+  const data = laden();
+  const vz = richtung==="einzahlen" ? 1 : -1;
+  const neuerStand = data.stand + vz * betrag;
+
+  if (neuerStand < 0) { errEl.textContent = "Tagesgeld-Stand würde negativ werden."; errEl.style.display="block"; return; }
+
+  const buchung = { id: Date.now(), datum: datumVal, topf, betrag, richtung, notiz, standNach: neuerStand };
+  data.stand = neuerStand;
+  data.buchungen.unshift(buchung);
+  speichern(data);
+
+  document.getElementById("form-betrag").value = "";
+  document.getElementById("form-notiz").value = "";
+  document.getElementById("preview").style.display = "none";
+
+  sucEl.textContent = `✓ ${richtung==="einzahlen"?"Einzahlung":"Entnahme"} von ${eur(betrag)} gespeichert.`;
+  sucEl.style.display = "block";
+  setTimeout(() => sucEl.style.display="none", 3000);
+
+  renderAll();
+}
+
+function loescheBuchung(id) {
+  const data = laden();
+  const b = data.buchungen.find(x=>x.id===id);
+  if (!b) return;
+  data.stand = data.stand + (b.richtung==="einzahlen"?-1:1)*b.betrag;
+  data.buchungen = data.buchungen.filter(x=>x.id!==id);
+  // Neuberechnung standNach
+  const sorted = [...data.buchungen].sort((a,z)=>new Date(a.datum)-new Date(z.datum));
+  let lauf = 0;
+  sorted.forEach(x=>{ lauf += x.richtung==="einzahlen"?x.betrag:-x.betrag; x.standNach=lauf; });
+  data.buchungen = sorted.reverse();
+  speichern(data);
+  renderAll();
+}
+
+function manuellerStand() {
+  const val = parseFloat(document.getElementById("settings-betrag").value);
+  const msgEl = document.getElementById("settings-msg");
+  if (isNaN(val)||val<0) { msgEl.textContent="Ungültiger Wert."; msgEl.style.color="#ef4444"; msgEl.style.display="block"; return; }
+  const data = laden();
+  data.stand = val;
+  speichern(data);
+  document.getElementById("settings-betrag").value = "";
+  msgEl.textContent = "✓ Stand aktualisiert.";
+  msgEl.style.color = "#22c55e";
+  msgEl.style.display = "block";
+  setTimeout(()=>msgEl.style.display="none",3000);
+  renderAll();
+}
+
+// Init
+document.getElementById("form-datum").value = new Date().toISOString().slice(0,10);
+renderAll();
+</script>
+</body>
+</html>
